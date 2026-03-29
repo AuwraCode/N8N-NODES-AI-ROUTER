@@ -1,2 +1,0 @@
-export declare const NodeUsableAsToolRule: import("@typescript-eslint/utils/ts-eslint").RuleModule<"missingUsableAsTool", [], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener>;
-//# sourceMappingURL=node-usable-as-tool.d.ts.map

@@ -1,2 +1,0 @@
-export declare const PackageNameConventionRule: import("@typescript-eslint/utils/ts-eslint").RuleModule<"renameTo" | "invalidPackageName", [], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener>;
-//# sourceMappingURL=package-name-convention.d.ts.map

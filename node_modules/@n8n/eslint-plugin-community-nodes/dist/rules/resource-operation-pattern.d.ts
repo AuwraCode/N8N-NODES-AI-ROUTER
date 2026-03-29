@@ -1,2 +1,0 @@
-export declare const ResourceOperationPatternRule: import("@typescript-eslint/utils/ts-eslint").RuleModule<"tooManyOperationsWithoutResources", [], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener>;
-//# sourceMappingURL=resource-operation-pattern.d.ts.map
