@@ -1,0 +1,14 @@
+{
+  "node": "n8n-nodes-ai-router.aiRouter",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["AI", "Development"],
+  "resources": {
+    "credentialDocumentation": [],
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/your-org/n8n-nodes-ai-router#readme"
+      }
+    ]
+  }
+}

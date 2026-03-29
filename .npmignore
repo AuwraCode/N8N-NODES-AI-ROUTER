@@ -1,0 +1,21 @@
+# Source files (only dist/ is published)
+nodes/
+credentials/
+test/
+
+# Config files
+.github/
+.eslintrc*
+eslint.config*
+tsconfig*.json
+vitest.config.ts
+.npmrc
+
+# Dev artifacts
+coverage/
+*.tsbuildinfo
+node_modules/
+
+# Documentation (README.md is included via package.json files field behavior)
+CONTRIBUTING.md
+CHANGELOG.md

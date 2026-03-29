@@ -1,0 +1,57 @@
+{
+  "name": "n8n-nodes-ai-router",
+  "version": "0.1.0",
+  "description": "Automatically route AI tasks to the most appropriate and cost-effective model across multiple providers",
+  "license": "MIT",
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "author": {
+    "name": "",
+    "email": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/n8n-nodes-ai-router.git"
+  },
+  "homepage": "https://github.com/your-org/n8n-nodes-ai-router#readme",
+  "bugs": {
+    "url": "https://github.com/your-org/n8n-nodes-ai-router/issues"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "n8n-node build",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "prepublishOnly": "n8n-node prerelease",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/AnthropicApi.credentials.js",
+      "dist/credentials/OpenAiApi.credentials.js",
+      "dist/credentials/GoogleGeminiApi.credentials.js",
+      "dist/credentials/MistralApi.credentials.js",
+      "dist/credentials/GroqApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/AiRouter/AiRouter.node.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "*",
+    "@vitest/coverage-v8": "^3.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
