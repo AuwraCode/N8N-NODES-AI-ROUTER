@@ -37,11 +37,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/AnthropicApi.credentials.js",
-      "dist/credentials/OpenAiApi.credentials.js",
-      "dist/credentials/GoogleGeminiApi.credentials.js",
-      "dist/credentials/MistralApi.credentials.js",
-      "dist/credentials/GroqApi.credentials.js"
+      "dist/credentials/AiRouterApi.credentials.js"
     ],
     "nodes": [
       "dist/nodes/AiRouter/AiRouter.node.js"
@@ -55,5 +51,8 @@
     "@vitest/coverage-v8": "^3.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
+  },
+  "overrides": {
+    "eslint": "^8.57.0"
   }
 }

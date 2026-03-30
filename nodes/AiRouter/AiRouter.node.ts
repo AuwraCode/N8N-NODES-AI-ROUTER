@@ -28,11 +28,7 @@ export class AiRouter implements INodeType {
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
-      { name: 'anthropicApi', required: false },
-      { name: 'openAiApi', required: false },
-      { name: 'googleGeminiApi', required: false },
-      { name: 'mistralApi', required: false },
-      { name: 'groqApi', required: false },
+      { name: 'aiRouterApi', required: true, displayName: 'AI Router Credentials' },
     ],
     properties: AI_ROUTER_PROPERTIES,
   };
@@ -55,26 +51,15 @@ export class AiRouter implements INodeType {
           throw new NodeOperationError(this.getNode(), 'Prompt cannot be empty', { itemIndex: i });
         }
 
-        // ── Resolve credentials (each is optional) ───────────────────────
+        // ── Resolve credentials from single credential object ────────────
+        const rawCreds = await this.getCredentials('aiRouterApi');
         const creds: CredMap = {};
-        const credMap: Array<[string, keyof CredMap]> = [
-          ['anthropicApi', 'anthropic'],
-          ['openAiApi', 'openai'],
-          ['googleGeminiApi', 'google'],
-          ['mistralApi', 'mistral'],
-          ['groqApi', 'groq'],
-        ];
-        for (const [credName, credKey] of credMap) {
-          try {
-            const c = await this.getCredentials(credName);
-            (creds as Record<string, string>)[credKey] = c.apiKey as string;
-          } catch {
-            // Not configured — provider will be filtered out by scoring engine
-          }
-        }
-        if (allowedProviders.includes('ollama')) {
-          creds.ollamaBaseUrl = this.getNodeParameter('ollamaBaseUrl', i, 'http://localhost:11434') as string;
-        }
+        if (rawCreds.anthropicApiKey) creds.anthropic = rawCreds.anthropicApiKey as string;
+        if (rawCreds.openAiApiKey)    creds.openai    = rawCreds.openAiApiKey as string;
+        if (rawCreds.googleApiKey)    creds.google    = rawCreds.googleApiKey as string;
+        if (rawCreds.mistralApiKey)   creds.mistral   = rawCreds.mistralApiKey as string;
+        if (rawCreds.groqApiKey)      creds.groq      = rawCreds.groqApiKey as string;
+        if (rawCreds.ollamaBaseUrl)   creds.ollamaBaseUrl = rawCreds.ollamaBaseUrl as string;
 
         // ── Build candidate list ─────────────────────────────────────────
         const candidates: ModelSpec[] = [...MODEL_REGISTRY];

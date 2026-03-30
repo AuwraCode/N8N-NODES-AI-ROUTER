@@ -1,0 +1,105 @@
+{
+  "name": "AI Router — Test Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-001",
+              "name": "prompt",
+              "value": "Write a short Python function that checks if a number is prime.",
+              "type": "string"
+            },
+            {
+              "id": "field-002",
+              "name": "mode",
+              "value": "auto",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Set Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "prompt": "={{ $json.prompt }}",
+        "mode": "={{ $json.mode }}",
+        "allowedProviders": ["groq"],
+        "fallbackEnabled": true,
+        "outputModelUsed": true
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "AI Router",
+      "type": "n8n-nodes-ai-router.aiRouter",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "groqApi": {
+          "id": "REPLACE_WITH_YOUR_GROQ_CREDENTIAL_ID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-003",
+              "name": "result",
+              "value": "={{ $json.response }}",
+              "type": "string"
+            },
+            {
+              "id": "field-004",
+              "name": "usedModel",
+              "value": "={{ $json.modelUsed }} ({{ $json.providerUsed }})",
+              "type": "string"
+            },
+            {
+              "id": "field-005",
+              "name": "tokens",
+              "value": "={{ $json.inputTokens }} in / {{ $json.outputTokens }} out",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{ "node": "Set Prompt", "type": "main", "index": 0 }]]
+    },
+    "Set Prompt": {
+      "main": [[{ "node": "AI Router", "type": "main", "index": 0 }]]
+    },
+    "AI Router": {
+      "main": [[{ "node": "Format Output", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

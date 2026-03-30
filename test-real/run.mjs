@@ -95,10 +95,10 @@ function truncate(str, max = 400) { return str.length > max ? str.slice(0, max) 
 
 // Cheapest/fastest model to use for the ping per provider
 const PING_MODELS = {
-  anthropic: 'claude-haiku-4-5',
+  anthropic: 'claude-haiku-4-5-20251001',
   openai:    'gpt-4o-mini',
   google:    'gemini-2.5-flash-lite',
-  mistral:   'mistral-small-3.1-2503',
+  mistral:   'mistral-small-4-0-26-03',
   groq:      'llama-3.3-70b-versatile',
   ollama:    ollamaModel,
 };
@@ -113,16 +113,17 @@ const validProviders = [];
 
 for (const provider of configuredProviders) {
   const modelId = PING_MODELS[provider];
-  let spec = MODEL_REGISTRY.find(m => m.id === modelId && m.provider === provider);
-
-  // Ollama uses a dynamic model ID
+  // Ollama uses a dynamic model ID — build spec from base placeholder
+  let spec;
   if (provider === 'ollama') {
-    spec = MODEL_REGISTRY.find(m => m.provider === 'ollama');
-    if (spec) spec = { ...spec, id: ollamaModel };
+    const base = MODEL_REGISTRY.find(m => m.provider === 'ollama');
+    spec = base ? { ...base, id: ollamaModel } : null;
+  } else {
+    spec = MODEL_REGISTRY.find(m => m.id === modelId && m.provider === provider);
   }
 
   if (!spec) {
-    console.log(`  ${YELLOW}?${RESET} ${provider.padEnd(10)} model '${modelId}' not found in registry, skipping`);
+    console.log(`  ${YELLOW}?${RESET} ${provider.padEnd(10)} ping model '${modelId}' not in registry — update PING_MODELS in run.mjs`);
     continue;
   }
 

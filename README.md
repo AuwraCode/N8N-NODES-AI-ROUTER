@@ -3,6 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/n8n-nodes-ai-router.svg)](https://www.npmjs.com/package/n8n-nodes-ai-router)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
+[![Status: In Development](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/your-org/n8n-nodes-ai-router/issues)
+
+> **⚠️ Early Development** — This node is functional but actively being developed. Model IDs, pricing data, and APIs may change. Run `npm run sync:models` periodically to catch stale model IDs. Feedback and bug reports are welcome via [GitHub Issues](https://github.com/your-org/n8n-nodes-ai-router/issues).
 
 An N8N community node that **automatically routes AI tasks to the most appropriate and cost-effective model** across Anthropic, OpenAI, Google Gemini, Mistral AI, Groq, and local Ollama instances.
 
@@ -51,16 +54,22 @@ npm install /path/to/n8n-nodes-ai-router
 
 ### Credentials setup
 
-After installation, configure credentials for each provider you want to use. At least one provider must be configured.
+The node uses a **single credential** called **AI Router Credentials** that holds all your API keys in one place.
 
-Go to **Credentials → New Credential** and add any of:
-- **Anthropic API** — get key at [console.anthropic.com](https://console.anthropic.com/)
-- **OpenAI API** — get key at [platform.openai.com](https://platform.openai.com/)
-- **Google Gemini API** — get key at [aistudio.google.com](https://aistudio.google.com/)
-- **Mistral AI API** — get key at [console.mistral.ai](https://console.mistral.ai/)
-- **Groq API** (free tier available) — get key at [console.groq.com](https://console.groq.com/)
+1. Add the AI Router node to a workflow
+2. Click **Set up credential** → fill in only the keys you have (leave the rest blank)
+3. Save — the router automatically skips any provider with a blank key
 
-For Ollama (local), no credential is needed — just configure the base URL in the node.
+| Field | Where to get it |
+|---|---|
+| Anthropic API Key | [console.anthropic.com](https://console.anthropic.com/) |
+| OpenAI API Key | [platform.openai.com](https://platform.openai.com/) |
+| Google Gemini API Key | [aistudio.google.com](https://aistudio.google.com/) |
+| Mistral AI API Key | [console.mistral.ai](https://console.mistral.ai/) |
+| Groq API Key (free tier) | [console.groq.com](https://console.groq.com/) |
+| Ollama Base URL | `http://localhost:11434` (default, no key needed) |
+
+You only need **one provider** to get started. Groq has a free tier — recommended for first-time setup.
 
 ---
 
