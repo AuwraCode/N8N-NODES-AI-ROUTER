@@ -78,7 +78,7 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     default: 'llama3',
     description: 'The Ollama model name to use (must be installed locally)',
     displayOptions: {
-      show: { allowedProviders: [['ollama']] },
+      show: { allowedProviders: ['ollama'] },
     },
   },
   {
@@ -88,7 +88,7 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     default: 'http://localhost:11434',
     description: 'Base URL for your local Ollama instance',
     displayOptions: {
-      show: { allowedProviders: [['ollama']] },
+      show: { allowedProviders: ['ollama'] },
     },
   },
   {

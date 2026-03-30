@@ -3,7 +3,6 @@
 [![npm version](https://img.shields.io/npm/v/n8n-nodes-ai-router.svg)](https://www.npmjs.com/package/n8n-nodes-ai-router)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
-[![CI](https://github.com/your-org/n8n-nodes-ai-router/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/n8n-nodes-ai-router/actions)
 
 An N8N community node that **automatically routes AI tasks to the most appropriate and cost-effective model** across Anthropic, OpenAI, Google Gemini, Mistral AI, Groq, and local Ollama instances.
 
@@ -15,6 +14,7 @@ Instead of hardcoding a single AI model in your workflows, the AI Router analyze
 - [Configuration](#configuration)
 - [How routing works](#how-routing-works)
 - [Model registry](#model-registry)
+- [Keeping the registry up to date](#keeping-the-registry-up-to-date)
 - [Adding a custom model](#adding-a-custom-model)
 - [Example workflow](#example-workflow)
 - [Contributing](#contributing)
@@ -34,8 +34,18 @@ Instead of hardcoding a single AI model in your workflows, the AI Router analyze
 ### Via npm (self-hosted)
 
 ```bash
-cd ~/.n8n/nodes
+cd ~/.n8n
 npm install n8n-nodes-ai-router
+# Restart n8n
+```
+
+### Local development install
+
+```bash
+cd /path/to/n8n-nodes-ai-router
+npm run build
+cd ~/.n8n
+npm install /path/to/n8n-nodes-ai-router
 # Restart n8n
 ```
 
@@ -48,7 +58,7 @@ Go to **Credentials → New Credential** and add any of:
 - **OpenAI API** — get key at [platform.openai.com](https://platform.openai.com/)
 - **Google Gemini API** — get key at [aistudio.google.com](https://aistudio.google.com/)
 - **Mistral AI API** — get key at [console.mistral.ai](https://console.mistral.ai/)
-- **Groq API** — get key at [console.groq.com](https://console.groq.com/)
+- **Groq API** (free tier available) — get key at [console.groq.com](https://console.groq.com/)
 
 For Ollama (local), no credential is needed — just configure the base URL in the node.
 
@@ -147,42 +157,98 @@ Weights `w_*` vary by mode:
 
 ## Model registry
 
-Pricing as of March 2026. `blendedPer1K = (input×0.7 + output×0.3) / 1000`.
+Pricing verified March 2026. `blendedPer1K = (input×0.7 + output×0.3) / 1000`.
 
-| Model | Provider | Input/1M | Output/1M | Context | Best for |
-|---|---|---|---|---|---|
-| `claude-opus-4-6` | Anthropic | $5.00 | $25.00 | 1M | Complex analysis, long documents |
-| `claude-sonnet-4-6` | Anthropic | $3.00 | $15.00 | 200K | Balanced quality and cost |
-| `claude-haiku-4-5` | Anthropic | $1.00 | $5.00 | 200K | Fast chat, classification |
-| `gpt-4.1` | OpenAI | $2.00 | $8.00 | 1M | General chat, coding |
-| `gpt-4o` | OpenAI | $2.50 | $10.00 | 128K | Vision, multimodal |
-| `o3` | OpenAI | $2.00 | $8.00 | 200K | Deep reasoning, complex analysis |
-| `gpt-4o-mini` | OpenAI | $0.15 | $0.60 | 128K | Cheap chat, classification |
-| `gemini-2.5-pro` | Google | $1.25 | $10.00 | 1M | Vision, long context analysis |
-| `gemini-2.5-flash` | Google | $0.30 | $2.50 | 1M | Fast summarization, cheap vision |
-| `gemini-2.5-flash-lite` | Google | $0.10 | $0.40 | 1M | Ultra-cheap classification |
-| `mistral-large-2512` | Mistral | $0.50 | $1.50 | 262K | Cost-efficient coding, analysis |
-| `mistral-medium-3` | Mistral | $0.40 | $2.00 | 131K | Balanced general tasks |
-| `mistral-small-creative` | Mistral | $0.10 | $0.30 | 33K | Creative writing (specialist) |
-| `devstral-2` | Mistral | $0.10 | $0.30 | 256K | Code generation (SWE-bench 72%) |
-| `llama-3.3-70b-versatile` | Groq | $0.59 | $0.79 | 128K | Low-latency general tasks |
-| `llama-4-scout-17b-16e-instruct` | Groq | $0.11 | $0.34 | 10M | Ultra-cheap vision, huge context |
-| `llama-4-maverick-17b-128e-instruct` | Groq | $0.20 | $0.60 | 128K | Fast vision, balanced quality |
-| `<your-model>` | Ollama | $0 | $0 | 128K | Privacy-sensitive, offline |
+### Anthropic
+
+| Model ID | Input/1M | Output/1M | Context | Best for |
+|---|---|---|---|---|
+| `claude-opus-4-6` | $5.00 | $25.00 | 1M | Complex analysis, long-context reasoning |
+| `claude-sonnet-4-6` | $3.00 | $15.00 | 1M | Balanced quality across all tasks |
+| `claude-haiku-4-5-20251001` | $1.00 | $5.00 | 200K | Fast chat, classification, vision |
+
+### OpenAI
+
+| Model ID | Input/1M | Output/1M | Context | Best for |
+|---|---|---|---|---|
+| `gpt-4.1` | $2.00 | $8.00 | 1M | General chat, coding, vision |
+| `gpt-4o` | $2.50 | $10.00 | 128K | Multimodal, vision tasks |
+| `o3` | $2.00 | $8.00 | 200K | Deep reasoning (no streaming) |
+| `o4-mini` | $1.10 | $4.40 | 200K | Cheaper reasoning, STEM, code |
+| `gpt-4o-mini` | $0.15 | $0.60 | 128K | Cheap chat, classification, vision |
+
+### Google Gemini
+
+| Model ID | Input/1M | Output/1M | Context | Best for |
+|---|---|---|---|---|
+| `gemini-3.1-pro-preview` | $2.00 | $12.00 | 1M | Cutting-edge quality (preview) |
+| `gemini-2.5-pro` | $1.25 | $10.00 | 1M | Long-context analysis, vision |
+| `gemini-3-flash-preview` | $0.50 | $3.00 | 1M | Fast next-gen tasks (preview) |
+| `gemini-2.5-flash` | $0.30 | $2.50 | 1M | Fast summarization, cheap vision |
+| `gemini-2.5-flash-lite` | $0.10 | $0.40 | 1M | Ultra-cheap classification |
+
+### Mistral
+
+| Model ID | Input/1M | Output/1M | Context | Best for |
+|---|---|---|---|---|
+| `mistral-large-2512` | $0.50 | $1.50 | 262K | Cost-efficient coding, analysis |
+| `mistral-medium-3` | $0.40 | $2.00 | 131K | Balanced general tasks |
+| `mistral-small-4-0-26-03` | $0.10 | $0.30 | 262K | Creative writing, chat |
+| `devstral-2-25-12` | $0.10 | $0.30 | 256K | Code generation (SWE-bench 72%) |
+
+### Groq (ultra-fast inference)
+
+| Model ID | Input/1M | Output/1M | Context | Best for |
+|---|---|---|---|---|
+| `moonshotai/kimi-k2-instruct` | $1.00 | $3.00 | 1M | Long-context analysis, agentic tasks |
+| `llama-3.3-70b-versatile` | $0.59 | $0.79 | 128K | Low-latency general tasks |
+| `qwen/qwen3-32b` | $0.29 | $0.59 | 128K | Coding, multilingual, reasoning |
+| `openai/gpt-oss-120b` | $0.15 | $0.60 | 128K | Balanced quality at ~500 t/s |
+| `meta-llama/llama-4-scout-17b-16e-instruct` | $0.11 | $0.34 | 10M | Ultra-cheap vision, huge context |
+| `openai/gpt-oss-20b` | $0.075 | $0.30 | 128K | Fastest throughput (~1000 t/s) |
+| `llama-3.1-8b-instant` | $0.05 | $0.08 | 128K | Cheapest, sub-100ms responses |
+
+### Ollama (local)
+
+| Model ID | Cost | Context | Notes |
+|---|---|---|---|
+| `<your-model>` | $0 | 128K | Any model pulled via `ollama pull` |
+
+---
+
+## Keeping the registry up to date
+
+Provider APIs change faster than documentation. Use the built-in sync script to check for stale or missing model IDs:
+
+```bash
+npm run build
+npm run sync:models
+```
+
+The script checks each provider's live `/models` endpoint against the registry and reports:
+- **Stale** — model IDs in the registry that no longer exist on the provider
+- **New** — model IDs available on the provider that aren't in the registry yet
+
+What the script **cannot** automate (requires manual updates to `modelRegistry.ts`):
+- Pricing (check each provider's pricing page)
+- Task affinity scores
+- Latency tier and context window
+
+Recommended cadence: run `sync:models` monthly or after you hear about a new model release.
 
 ---
 
 ## Adding a custom model
 
-Adding a new model requires editing a single file: `nodes/AiRouter/router/modelRegistry.ts`.
+Editing a single file is all that's needed: `nodes/AiRouter/router/modelRegistry.ts`.
 
-1. Append a new entry to `MODEL_REGISTRY`:
+Append a new entry to `MODEL_REGISTRY`:
 
 ```typescript
 {
-  id: 'your-model-api-id',   // exact string used in API calls
-  provider: 'openai',         // existing provider, or add new one
-  displayName: 'My Custom Model',
+  id: 'your-model-api-id',   // exact string sent in API calls
+  provider: 'openai',         // must be an existing ProviderType
+  displayName: 'My Model',
   pricing: {
     inputPer1M: 1.00,
     outputPer1M: 4.00,
@@ -196,22 +262,22 @@ Adding a new model requires editing a single file: `nodes/AiRouter/router/modelR
     isLocal: false,
     contextWindow: 128_000,
   },
-  latencyTier: 1,             // 1=fast, 2=moderate, 3=slow
+  latencyTier: 1,             // 1=fast, 2=moderate, 3=slow (reasoning)
   taskAffinity: {
     coding: 0.88,
     chat: 0.85,
-    // Omit tasks where this model has no particular strength
+    // Omit tasks where this model has no particular strength (defaults to 0.5)
   },
 },
 ```
 
-2. If it's a new provider, see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-new-provider).
+Then rebuild: `npm run build`
+
+For a new provider (new API), see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-new-provider).
 
 ---
 
 ## Example workflow
-
-> **Screenshot placeholder** — add a screenshot of a workflow using the AI Router node here.
 
 A minimal routing workflow:
 
@@ -228,12 +294,12 @@ The output JSON looks like:
 
 ```json
 {
-  "response": "Here is the Python function you requested:\n\n```python\ndef sort_list(lst):\n    return sorted(lst)\n```",
-  "modelUsed": "devstral-2",
-  "providerUsed": "mistral",
+  "response": "Here is the TypeScript function you requested:\n\n```typescript\nfunction debounce...",
+  "modelUsed": "meta-llama/llama-4-scout-17b-16e-instruct",
+  "providerUsed": "groq",
   "attemptsTaken": 1,
-  "inputTokens": 24,
-  "outputTokens": 47
+  "inputTokens": 25,
+  "outputTokens": 459
 }
 ```
 

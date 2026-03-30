@@ -1,6 +1,6 @@
 import {
-  NodeConnectionType,
   NodeOperationError,
+  type IDataObject,
   type IExecuteFunctions,
   type INodeExecutionData,
   type INodeType,
@@ -25,8 +25,8 @@ export class AiRouter implements INodeType {
     description: 'Automatically routes AI tasks to the most appropriate and cost-effective model',
     defaults: { name: 'AI Router' },
     usableAsTool: true,
-    inputs: [NodeConnectionType.Main],
-    outputs: [NodeConnectionType.Main],
+    inputs: ['main'],
+    outputs: ['main'],
     credentials: [
       { name: 'anthropicApi', required: false },
       { name: 'openAiApi', required: false },
@@ -108,7 +108,7 @@ export class AiRouter implements INodeType {
         const result = await executeWithFallback(ranked, prompt, creds, {}, { maxAttempts });
 
         // ── Build output ─────────────────────────────────────────────────
-        const outputJson: Record<string, unknown> = { ...items[i].json, response: result.response.text };
+        const outputJson: IDataObject = { ...items[i].json, response: result.response.text };
         if (outputModelUsed) {
           outputJson.modelUsed = result.modelUsed.id;
           outputJson.providerUsed = result.modelUsed.provider;

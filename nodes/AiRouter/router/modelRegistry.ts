@@ -52,7 +52,7 @@ export interface ModelCapabilities {
   supportsStreaming: boolean;
   /**
    * Whether the model uses a reasoning/thinking mode
-   * (e.g. OpenAI o3 — requires special parameter handling).
+   * (e.g. OpenAI o3/o4-mini — requires special parameter handling).
    */
   supportsReasoningMode: boolean;
   /** Whether the model runs locally (e.g. Ollama). Zero cost, privacy-preserving. */
@@ -92,10 +92,13 @@ export interface ModelSpec {
  * The complete model registry. Add new models here — no other file needs to change
  * for the routing engine to discover and use them.
  *
- * Pricing last verified: March 2026. Update blendedPer1K when pricing changes.
+ * Pricing last verified: March 2026. Run `npm run sync:models` to check for stale IDs.
+ * Update blendedPer1K when pricing changes: (inputPer1M * 0.7 + outputPer1M * 0.3) / 1000
  */
 export const MODEL_REGISTRY: readonly ModelSpec[] = [
+
   // ── Anthropic ─────────────────────────────────────────────────────────────
+  // Pricing: https://www.anthropic.com/pricing#anthropic-api
   {
     id: 'claude-opus-4-6',
     provider: 'anthropic',
@@ -113,11 +116,11 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     taskAffinity: {
       analysis: 1.0,
       coding: 0.95,
-      writing: 0.9,
-      summarization: 0.85,
-      chat: 0.8,
-      classification: 0.75,
-      vision: 0.9,
+      writing: 0.92,
+      vision: 0.90,
+      summarization: 0.88,
+      chat: 0.82,
+      classification: 0.78,
     },
   },
   {
@@ -131,21 +134,21 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsStreaming: true,
       supportsReasoningMode: false,
       isLocal: false,
-      contextWindow: 200_000,
+      contextWindow: 1_000_000,
     },
     latencyTier: 2,
     taskAffinity: {
-      coding: 0.9,
-      analysis: 0.88,
-      writing: 0.85,
-      summarization: 0.85,
-      chat: 0.9,
-      classification: 0.8,
-      vision: 0.85,
+      coding: 0.92,
+      analysis: 0.90,
+      writing: 0.88,
+      summarization: 0.87,
+      chat: 0.90,
+      classification: 0.82,
+      vision: 0.87,
     },
   },
   {
-    id: 'claude-haiku-4-5',
+    id: 'claude-haiku-4-5-20251001',
     provider: 'anthropic',
     displayName: 'Claude Haiku 4.5',
     pricing: { inputPer1M: 1, outputPer1M: 5, blendedPer1K: 0.0022 },
@@ -159,23 +162,25 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 1,
     taskAffinity: {
-      chat: 0.9,
-      classification: 0.85,
-      summarization: 0.8,
-      writing: 0.7,
-      coding: 0.65,
-      analysis: 0.6,
+      chat: 0.90,
+      classification: 0.88,
+      summarization: 0.82,
+      writing: 0.72,
+      coding: 0.68,
+      analysis: 0.62,
+      vision: 0.75,
     },
   },
 
   // ── OpenAI ────────────────────────────────────────────────────────────────
+  // Pricing: https://openai.com/api/pricing/
   {
     id: 'gpt-4.1',
     provider: 'openai',
     displayName: 'GPT-4.1',
     pricing: { inputPer1M: 2, outputPer1M: 8, blendedPer1K: 0.0038 },
     capabilities: {
-      supportsVision: false,
+      supportsVision: true,
       supportsEmbeddings: false,
       supportsStreaming: true,
       supportsReasoningMode: false,
@@ -184,12 +189,13 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 2,
     taskAffinity: {
-      chat: 0.9,
-      coding: 0.88,
-      analysis: 0.85,
-      writing: 0.85,
-      summarization: 0.8,
-      classification: 0.8,
+      chat: 0.90,
+      coding: 0.90,
+      analysis: 0.87,
+      writing: 0.87,
+      summarization: 0.82,
+      classification: 0.82,
+      vision: 0.85,
     },
   },
   {
@@ -208,16 +214,16 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 2,
     taskAffinity: {
       vision: 1.0,
-      chat: 0.9,
-      coding: 0.85,
-      analysis: 0.85,
-      writing: 0.85,
-      summarization: 0.8,
+      chat: 0.90,
+      coding: 0.87,
+      analysis: 0.87,
+      writing: 0.87,
+      summarization: 0.82,
+      classification: 0.80,
     },
   },
   {
-    // NOTE: o3 does not accept temperature or stream parameters.
-    // The provider adapter handles this automatically via supportsReasoningMode flag.
+    // o3: does not accept temperature or stream. Handled via supportsReasoningMode flag.
     id: 'o3',
     provider: 'openai',
     displayName: 'OpenAI o3',
@@ -233,8 +239,30 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 3,
     taskAffinity: {
       analysis: 1.0,
+      coding: 0.97,
+      summarization: 0.82,
+      classification: 0.78,
+    },
+  },
+  {
+    // o4-mini: cheaper reasoning model, strong on STEM and code.
+    id: 'o4-mini',
+    provider: 'openai',
+    displayName: 'OpenAI o4-mini',
+    pricing: { inputPer1M: 1.1, outputPer1M: 4.4, blendedPer1K: 0.00209 },
+    capabilities: {
+      supportsVision: false,
+      supportsEmbeddings: false,
+      supportsStreaming: false,
+      supportsReasoningMode: true,
+      isLocal: false,
+      contextWindow: 200_000,
+    },
+    latencyTier: 3,
+    taskAffinity: {
       coding: 0.95,
-      summarization: 0.8,
+      analysis: 0.92,
+      summarization: 0.78,
       classification: 0.75,
     },
   },
@@ -253,16 +281,18 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 1,
     taskAffinity: {
-      chat: 0.9,
-      classification: 0.9,
-      summarization: 0.8,
-      writing: 0.7,
-      vision: 0.7,
+      chat: 0.90,
+      classification: 0.90,
+      summarization: 0.82,
+      writing: 0.72,
+      vision: 0.72,
     },
   },
 
   // ── Google Gemini ─────────────────────────────────────────────────────────
+  // Pricing: https://ai.google.dev/gemini-api/docs/pricing
   {
+    // Latest stable flagship — best for long-context analysis and vision.
     id: 'gemini-2.5-pro',
     provider: 'google',
     displayName: 'Gemini 2.5 Pro',
@@ -277,13 +307,38 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 2,
     taskAffinity: {
-      analysis: 0.92,
+      analysis: 0.93,
+      vision: 0.92,
       coding: 0.88,
-      vision: 0.9,
       summarization: 0.88,
-      writing: 0.85,
-      chat: 0.82,
-      classification: 0.8,
+      writing: 0.87,
+      chat: 0.83,
+      classification: 0.82,
+    },
+  },
+  {
+    // Next-gen preview flagship — higher quality than 2.5 Pro at higher cost.
+    id: 'gemini-3.1-pro-preview',
+    provider: 'google',
+    displayName: 'Gemini 3.1 Pro (Preview)',
+    pricing: { inputPer1M: 2.0, outputPer1M: 12, blendedPer1K: 0.005 },
+    capabilities: {
+      supportsVision: true,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 1_000_000,
+    },
+    latencyTier: 2,
+    taskAffinity: {
+      analysis: 0.96,
+      vision: 0.95,
+      coding: 0.92,
+      writing: 0.90,
+      summarization: 0.90,
+      chat: 0.85,
+      classification: 0.85,
     },
   },
   {
@@ -302,12 +357,37 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 1,
     taskAffinity: {
       chat: 0.88,
-      summarization: 0.85,
-      classification: 0.85,
-      coding: 0.78,
-      writing: 0.78,
-      vision: 0.82,
-      analysis: 0.75,
+      summarization: 0.87,
+      classification: 0.87,
+      vision: 0.84,
+      coding: 0.80,
+      writing: 0.80,
+      analysis: 0.77,
+    },
+  },
+  {
+    // Good preview flash option — cheaper than 2.5 Flash with newer capabilities.
+    id: 'gemini-3-flash-preview',
+    provider: 'google',
+    displayName: 'Gemini 3 Flash (Preview)',
+    pricing: { inputPer1M: 0.5, outputPer1M: 3.0, blendedPer1K: 0.00125 },
+    capabilities: {
+      supportsVision: true,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 1_000_000,
+    },
+    latencyTier: 1,
+    taskAffinity: {
+      chat: 0.90,
+      summarization: 0.88,
+      classification: 0.88,
+      vision: 0.87,
+      coding: 0.82,
+      writing: 0.82,
+      analysis: 0.80,
     },
   },
   {
@@ -316,7 +396,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     displayName: 'Gemini 2.5 Flash Lite',
     pricing: { inputPer1M: 0.1, outputPer1M: 0.4, blendedPer1K: 0.00019 },
     capabilities: {
-      supportsVision: false,
+      supportsVision: true,
       supportsEmbeddings: false,
       supportsStreaming: true,
       supportsReasoningMode: false,
@@ -327,15 +407,18 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     taskAffinity: {
       chat: 0.85,
       classification: 0.88,
-      summarization: 0.78,
+      summarization: 0.80,
+      vision: 0.78,
     },
   },
 
   // ── Mistral ───────────────────────────────────────────────────────────────
+  // Pricing: https://mistral.ai/pricing
+  // Run `npm run sync:models` after adding a Mistral key to verify IDs.
   {
     id: 'mistral-large-2512',
     provider: 'mistral',
-    displayName: 'Mistral Large 25.12',
+    displayName: 'Mistral Large 3',
     pricing: { inputPer1M: 0.5, outputPer1M: 1.5, blendedPer1K: 0.0008 },
     capabilities: {
       supportsVision: false,
@@ -347,18 +430,18 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 2,
     taskAffinity: {
-      coding: 0.85,
-      analysis: 0.82,
-      chat: 0.82,
-      writing: 0.8,
-      summarization: 0.8,
-      classification: 0.78,
+      coding: 0.87,
+      analysis: 0.85,
+      chat: 0.83,
+      writing: 0.82,
+      summarization: 0.82,
+      classification: 0.80,
     },
   },
   {
     id: 'mistral-medium-3',
     provider: 'mistral',
-    displayName: 'Mistral Medium 3',
+    displayName: 'Mistral Medium 3.1',
     pricing: { inputPer1M: 0.4, outputPer1M: 2.0, blendedPer1K: 0.00088 },
     capabilities: {
       supportsVision: false,
@@ -370,17 +453,18 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 2,
     taskAffinity: {
-      chat: 0.82,
-      writing: 0.82,
-      analysis: 0.78,
-      summarization: 0.78,
-      classification: 0.75,
+      chat: 0.83,
+      writing: 0.83,
+      analysis: 0.80,
+      summarization: 0.80,
+      classification: 0.77,
     },
   },
   {
-    id: 'mistral-small-creative',
+    // Mistral Small 4 (v26.03) — replaces Small Creative, broader task coverage.
+    id: 'mistral-small-4-0-26-03',
     provider: 'mistral',
-    displayName: 'Mistral Small Creative',
+    displayName: 'Mistral Small 4',
     pricing: { inputPer1M: 0.1, outputPer1M: 0.3, blendedPer1K: 0.00016 },
     capabilities: {
       supportsVision: false,
@@ -388,19 +472,20 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsStreaming: true,
       supportsReasoningMode: false,
       isLocal: false,
-      contextWindow: 33_000,
+      contextWindow: 262_000,
     },
     latencyTier: 1,
     taskAffinity: {
-      writing: 1.0,
-      chat: 0.8,
-      summarization: 0.7,
+      writing: 0.87,
+      chat: 0.83,
+      summarization: 0.80,
+      classification: 0.78,
+      coding: 0.72,
     },
   },
   {
-    // Devstral 2: 123B dense transformer, specialized for code (72.2% SWE-bench).
-    // Pricing is estimated at standard Mistral API rates; verify at launch.
-    id: 'devstral-2',
+    // Devstral 2 (v25.12): 123B dense transformer, specialized for code (72.2% SWE-bench).
+    id: 'devstral-2-25-12',
     provider: 'mistral',
     displayName: 'Devstral 2',
     pricing: { inputPer1M: 0.1, outputPer1M: 0.3, blendedPer1K: 0.00016 },
@@ -415,11 +500,33 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 2,
     taskAffinity: {
       coding: 1.0,
-      analysis: 0.75,
+      analysis: 0.77,
     },
   },
 
   // ── Groq (ultra-fast inference) ───────────────────────────────────────────
+  // Pricing: https://console.groq.com/docs/models
+  {
+    // Fastest budget option — sub-100ms for short prompts.
+    id: 'llama-3.1-8b-instant',
+    provider: 'groq',
+    displayName: 'Llama 3.1 8B Instant (Groq)',
+    pricing: { inputPer1M: 0.05, outputPer1M: 0.08, blendedPer1K: 0.000059 },
+    capabilities: {
+      supportsVision: false,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 128_000,
+    },
+    latencyTier: 1,
+    taskAffinity: {
+      chat: 0.82,
+      classification: 0.80,
+      summarization: 0.75,
+    },
+  },
   {
     id: 'llama-3.3-70b-versatile',
     provider: 'groq',
@@ -436,16 +543,15 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 1,
     taskAffinity: {
       chat: 0.88,
-      writing: 0.82,
-      summarization: 0.82,
-      coding: 0.78,
-      classification: 0.8,
-      analysis: 0.75,
+      writing: 0.83,
+      summarization: 0.83,
+      coding: 0.80,
+      classification: 0.82,
+      analysis: 0.77,
     },
   },
   {
-    // TODO: Verify final pricing for Llama 4 Scout on Groq at launch.
-    id: 'llama-4-scout-17b-16e-instruct',
+    id: 'meta-llama/llama-4-scout-17b-16e-instruct',
     provider: 'groq',
     displayName: 'Llama 4 Scout 17B (Groq)',
     pricing: { inputPer1M: 0.11, outputPer1M: 0.34, blendedPer1K: 0.000179 },
@@ -459,21 +565,45 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     },
     latencyTier: 1,
     taskAffinity: {
-      chat: 0.85,
-      vision: 0.85,
-      classification: 0.82,
-      summarization: 0.8,
-      writing: 0.75,
+      chat: 0.87,
+      vision: 0.87,
+      classification: 0.84,
+      summarization: 0.82,
+      writing: 0.77,
+      coding: 0.75,
+      analysis: 0.73,
     },
   },
   {
-    // TODO: Verify final pricing for Llama 4 Maverick on Groq at launch.
-    id: 'llama-4-maverick-17b-128e-instruct',
+    // OpenAI OSS 20B on Groq — ~1000 tokens/sec, best throughput available.
+    id: 'openai/gpt-oss-20b',
     provider: 'groq',
-    displayName: 'Llama 4 Maverick 17B (Groq)',
-    pricing: { inputPer1M: 0.2, outputPer1M: 0.6, blendedPer1K: 0.00032 },
+    displayName: 'GPT-OSS 20B (Groq)',
+    pricing: { inputPer1M: 0.075, outputPer1M: 0.3, blendedPer1K: 0.000143 },
     capabilities: {
-      supportsVision: true,
+      supportsVision: false,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 128_000,
+    },
+    latencyTier: 1,
+    taskAffinity: {
+      chat: 0.85,
+      classification: 0.83,
+      summarization: 0.80,
+      writing: 0.78,
+    },
+  },
+  {
+    // OpenAI OSS 120B on Groq — ~500 tokens/sec, stronger than 20B on complex tasks.
+    id: 'openai/gpt-oss-120b',
+    provider: 'groq',
+    displayName: 'GPT-OSS 120B (Groq)',
+    pricing: { inputPer1M: 0.15, outputPer1M: 0.6, blendedPer1K: 0.000285 },
+    capabilities: {
+      supportsVision: false,
       supportsEmbeddings: false,
       supportsStreaming: true,
       supportsReasoningMode: false,
@@ -483,10 +613,59 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
     latencyTier: 1,
     taskAffinity: {
       chat: 0.88,
-      vision: 0.88,
-      coding: 0.78,
-      writing: 0.8,
-      analysis: 0.78,
+      coding: 0.83,
+      analysis: 0.82,
+      writing: 0.82,
+      summarization: 0.82,
+      classification: 0.83,
+    },
+  },
+  {
+    // Qwen3 32B on Groq — strong reasoning and multilingual, competitive with 70B models.
+    id: 'qwen/qwen3-32b',
+    provider: 'groq',
+    displayName: 'Qwen3 32B (Groq)',
+    pricing: { inputPer1M: 0.29, outputPer1M: 0.59, blendedPer1K: 0.00038 },
+    capabilities: {
+      supportsVision: false,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 128_000,
+    },
+    latencyTier: 1,
+    taskAffinity: {
+      coding: 0.87,
+      analysis: 0.85,
+      chat: 0.85,
+      summarization: 0.83,
+      writing: 0.80,
+      classification: 0.82,
+    },
+  },
+  {
+    // Kimi K2 on Groq — 1M context, strong agentic and long-document tasks.
+    id: 'moonshotai/kimi-k2-instruct',
+    provider: 'groq',
+    displayName: 'Kimi K2 (Groq)',
+    pricing: { inputPer1M: 1.0, outputPer1M: 3.0, blendedPer1K: 0.0016 },
+    capabilities: {
+      supportsVision: false,
+      supportsEmbeddings: false,
+      supportsStreaming: true,
+      supportsReasoningMode: false,
+      isLocal: false,
+      contextWindow: 1_000_000,
+    },
+    latencyTier: 1,
+    taskAffinity: {
+      analysis: 0.90,
+      coding: 0.88,
+      summarization: 0.87,
+      chat: 0.83,
+      writing: 0.82,
+      classification: 0.80,
     },
   },
 ];
@@ -507,7 +686,7 @@ export const OLLAMA_BASE_SPEC: Omit<ModelSpec, 'id' | 'displayName'> = {
     contextWindow: 128_000,
   },
   latencyTier: 2,
-  taskAffinity: { chat: 0.75, writing: 0.7, coding: 0.7 },
+  taskAffinity: { chat: 0.75, writing: 0.70, coding: 0.70 },
 };
 
 /**
