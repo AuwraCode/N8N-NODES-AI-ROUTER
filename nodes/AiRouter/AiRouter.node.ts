@@ -28,7 +28,7 @@ export class AiRouter implements INodeType {
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
-      { name: 'aiRouterApi', required: true, displayName: 'AI Router Credentials' },
+      { name: 'aiRouterApi', required: true, displayName: 'AI Router Credentials', testedBy: 'aiRouterTest' },
     ],
     properties: AI_ROUTER_PROPERTIES,
   };

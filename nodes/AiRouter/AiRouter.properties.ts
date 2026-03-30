@@ -24,10 +24,10 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     description: 'How to prioritize model selection',
     options: [
       { name: 'Auto — Balanced', value: 'auto', description: 'Balance task fit, cost, speed, and context size' },
-      { name: 'Cost — Cheapest viable model', value: 'cost', description: 'Minimize token cost while maintaining task fit' },
-      { name: 'Quality — Best available model', value: 'quality', description: 'Maximize output quality regardless of cost' },
-      { name: 'Speed — Fastest model', value: 'speed', description: 'Minimize latency (prefer tier-1 models)' },
-      { name: 'Local — Ollama only', value: 'local', description: 'Run locally via Ollama for privacy or offline use' },
+      { name: 'Cost — Cheapest Viable Model', value: 'cost', description: 'Minimize token cost while maintaining task fit' },
+      { name: 'Local — Ollama Only', value: 'local', description: 'Run locally via Ollama for privacy or offline use' },
+      { name: 'Quality — Best Available Model', value: 'quality', description: 'Maximize output quality regardless of cost' },
+      { name: 'Speed — Fastest Model', value: 'speed', description: 'Minimize latency (prefer tier-1 models)' },
     ],
   },
   {
@@ -37,8 +37,8 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     default: '',
     description: 'Override automatic task detection. Leave as Auto-detect for heuristic classification.',
     options: [
-      { name: 'Auto-detect', value: '' },
       { name: 'Analysis', value: 'analysis' },
+      { name: 'Auto-Detect', value: '' },
       { name: 'Chat', value: 'chat' },
       { name: 'Classification', value: 'classification' },
       { name: 'Coding', value: 'coding' },
