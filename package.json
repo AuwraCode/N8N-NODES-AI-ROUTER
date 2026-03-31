@@ -8,15 +8,15 @@
   ],
   "author": {
     "name": "Auwra",
-    "email": "your@email.com"
+    "email": "grzegorzhandzel992@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/n8n-nodes-ai-router.git"
+    "url": "https://github.com/AuwraCode/N8N-NODES-AI-ROUTER.git"
   },
-  "homepage": "https://github.com/your-org/n8n-nodes-ai-router#readme",
+  "homepage": "https://github.com/AuwraCode/N8N-NODES-AI-ROUTER#readme",
   "bugs": {
-    "url": "https://github.com/your-org/n8n-nodes-ai-router/issues"
+    "url": "https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues"
   },
   "main": "index.js",
   "scripts": {
