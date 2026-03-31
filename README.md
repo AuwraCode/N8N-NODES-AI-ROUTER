@@ -1,11 +1,11 @@
-# n8n-nodes-ai-router
+# @auwra/n8n-nodes-ai-router
 
-[![npm version](https://img.shields.io/npm/v/n8n-nodes-ai-router.svg)](https://www.npmjs.com/package/n8n-nodes-ai-router)
+[![npm version](https://img.shields.io/npm/v/@auwra/n8n-nodes-ai-router.svg)](https://www.npmjs.com/package/@auwra/n8n-nodes-ai-router)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
-[![Status: In Development](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/your-org/n8n-nodes-ai-router/issues)
+[![Status: In Development](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues)
 
-> **⚠️ Early Development** — This node is functional but actively being developed. Model IDs, pricing data, and APIs may change. Run `npm run sync:models` periodically to catch stale model IDs. Feedback and bug reports are welcome via [GitHub Issues](https://github.com/your-org/n8n-nodes-ai-router/issues).
+> **⚠️ Early Development** — This node is functional but actively being developed. Model IDs, pricing data, and APIs may change. Run `npm run sync:models` periodically to catch stale model IDs. Feedback and bug reports are welcome via [GitHub Issues](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues).
 
 An N8N community node that **automatically routes AI tasks to the most appropriate and cost-effective model** across Anthropic, OpenAI, Google Gemini, Mistral AI, Groq, and local Ollama instances.
 
@@ -31,14 +31,14 @@ Instead of hardcoding a single AI model in your workflows, the AI Router analyze
 
 1. In your n8n instance, go to **Settings → Community Nodes**
 2. Click **Install**
-3. Enter `n8n-nodes-ai-router`
+3. Enter `@auwra/n8n-nodes-ai-router`
 4. Click **Install**
 
 ### Via npm (self-hosted)
 
 ```bash
 cd ~/.n8n
-npm install n8n-nodes-ai-router
+npm install @auwra/n8n-nodes-ai-router
 # Restart n8n
 ```
 
