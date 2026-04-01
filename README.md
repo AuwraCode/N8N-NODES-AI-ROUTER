@@ -7,12 +7,26 @@
 
 > **⚠️ Early Development** — This node is functional but actively being developed. Model IDs, pricing data, and APIs may change. Run `npm run sync:models` periodically to catch stale model IDs. Feedback and bug reports are welcome via [GitHub Issues](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues).
 
+## Changelog
+
+### v0.1.4
+- **Fix:** Anthropic requests no longer hang indefinitely — the request timeout now correctly catches `AbortError` in Node.js environments (n8n runs on Node.js where the error type differs from browsers)
+- **Fix:** `max_tokens` is now always included in Anthropic requests (it is required by the API) — previously omitting it caused silent 400 errors
+- **Fix:** Anthropic responses from reasoning-capable models (e.g. `claude-opus-4-6`) are now parsed correctly — the text block is found by type rather than by position, so a leading thinking block no longer causes the response to be discarded
+
+### v0.1.3
+- Internal build — superseded by v0.1.4
+
+### v0.1.2
+- Initial public release
+
 An N8N community node that **automatically routes AI tasks to the most appropriate and cost-effective model** across Anthropic, OpenAI, Google Gemini, Mistral AI, Groq, and local Ollama instances.
 
 Instead of hardcoding a single AI model in your workflows, the AI Router analyzes each incoming prompt — detecting whether it's a coding task, creative writing, data analysis, summarization, vision, or plain chat — and picks the best model based on your configured priority: cheapest, fastest, highest quality, or a smart balance. It maintains a built-in scoring engine that weighs task fit, token cost, response latency, and context window size, then automatically falls back to the next-best model if the primary one fails.
 
 ## Table of contents
 
+- [Changelog](#changelog)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [How routing works](#how-routing-works)

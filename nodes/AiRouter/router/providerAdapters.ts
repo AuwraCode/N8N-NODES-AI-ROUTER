@@ -29,8 +29,6 @@ export interface CredMap {
 
 /** Options for model invocation. */
 export interface CallOptions {
-  /** Whether to use streaming. Defaults to false. Ignored for reasoning models. */
-  stream?: boolean;
   /** Maximum tokens to generate. Defaults to 4096. */
   maxTokens?: number;
   /** Sampling temperature. Defaults to 0.7. Ignored for reasoning models. */
@@ -43,6 +41,8 @@ export interface CallOptions {
 export interface ModelResponse {
   /** The generated text content. */
   text: string;
+  /** Internal reasoning/thinking text from reasoning models (e.g. o3, o4-mini). */
+  thinking?: string;
   /** Number of input tokens consumed (if reported by provider). */
   inputTokens?: number;
   /** Number of output tokens generated (if reported by provider). */
@@ -67,6 +67,26 @@ export class ProviderError extends Error {
   }
 }
 
+/**
+ * Wraps fetch() with an AbortController timeout. Throws an AbortError if the
+ * request takes longer than `ms` milliseconds (default 30 s).
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 90_000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    // Node.js (undici) throws a plain Error with name 'AbortError', not a DOMException
+    if ((err as Error)?.name === 'AbortError') {
+      throw new ProviderError(`Request timed out after ${ms / 1000}s`, 504);
+    }
+    throw err;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 type AdapterFn = (
   model: ModelSpec,
   prompt: string,
@@ -76,13 +96,20 @@ type AdapterFn = (
 
 // ── Anthropic ────────────────────────────────────────────────────────────────
 
-interface AnthropicContent {
-  type: string;
+interface AnthropicTextBlock {
+  type: 'text';
   text: string;
 }
 
+interface AnthropicThinkingBlock {
+  type: 'thinking';
+  thinking: string;
+}
+
+type AnthropicContentBlock = AnthropicTextBlock | AnthropicThinkingBlock | { type: string };
+
 interface AnthropicResponse {
-  content: AnthropicContent[];
+  content: AnthropicContentBlock[];
   usage: { input_tokens: number; output_tokens: number };
 }
 
@@ -91,12 +118,13 @@ const anthropicAdapter: AdapterFn = async (model, prompt, creds, opts) => {
 
   const body: Record<string, unknown> = {
     model: model.id,
-    max_tokens: opts.maxTokens ?? 4096,
     messages: [{ role: 'user', content: prompt }],
+    // max_tokens is required by Anthropic API — default to 4096 if not specified
+    max_tokens: opts.maxTokens && opts.maxTokens > 0 ? opts.maxTokens : 4096,
   };
   if (opts.systemPrompt) body.system = opts.systemPrompt;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'x-api-key': creds.anthropic,
@@ -112,8 +140,14 @@ const anthropicAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as AnthropicResponse;
+  // Find first text block — reasoning models may return a thinking block at index 0
+  const textBlock = data.content.find((b): b is AnthropicTextBlock => b.type === 'text');
+  const thinkingBlock = data.content.find((b): b is AnthropicThinkingBlock => b.type === 'thinking');
+  const text = textBlock?.text;
+  if (!text) throw new ProviderError('Anthropic returned no content (possibly content-filtered)', 200);
   return {
-    text: data.content[0]?.text ?? '',
+    text,
+    thinking: thinkingBlock?.thinking,
     inputTokens: data.usage?.input_tokens,
     outputTokens: data.usage?.output_tokens,
     model: model.id,
@@ -129,7 +163,7 @@ interface OpenAIMessage {
 }
 
 interface OpenAIResponse {
-  choices: Array<{ message: { content: string } }>;
+  choices: Array<{ message: { content: string; reasoning_content?: string } }>;
   usage?: { prompt_tokens: number; completion_tokens: number };
 }
 
@@ -143,15 +177,15 @@ const openaiAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   const body: Record<string, unknown> = {
     model: model.id,
     messages,
-    max_completion_tokens: opts.maxTokens ?? 4096,
   };
+  if (opts.maxTokens && opts.maxTokens > 0) body.max_completion_tokens = opts.maxTokens;
 
   // Reasoning models (o3) do not accept temperature or stream parameters
   if (!model.capabilities.supportsReasoningMode) {
     body.temperature = opts.temperature ?? 0.7;
   }
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${creds.openai}`,
@@ -166,8 +200,12 @@ const openaiAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as OpenAIResponse;
+  const text = data.choices[0]?.message?.content;
+  if (!text) throw new ProviderError('OpenAI returned no content (possibly content-filtered)', 200);
+  const thinking = data.choices[0]?.message?.reasoning_content ?? undefined;
   return {
-    text: data.choices[0]?.message?.content ?? '',
+    text,
+    thinking,
     inputTokens: data.usage?.prompt_tokens,
     outputTokens: data.usage?.completion_tokens,
     model: model.id,
@@ -190,23 +228,25 @@ interface GoogleResponse {
 const googleAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   if (!creds.google) throw new ProviderError('Google Gemini API key not configured', 401);
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${creds.google}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent`;
 
+  const generationConfig: Record<string, unknown> = { temperature: opts.temperature ?? 0.7 };
+  if (opts.maxTokens && opts.maxTokens > 0) generationConfig.maxOutputTokens = opts.maxTokens;
   const body: Record<string, unknown> = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      maxOutputTokens: opts.maxTokens ?? 4096,
-      temperature: opts.temperature ?? 0.7,
-    },
+    generationConfig,
   };
 
   if (opts.systemPrompt) {
     body.systemInstruction = { parts: [{ text: opts.systemPrompt }] };
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': creds.google,
+    },
     body: JSON.stringify(body),
   });
 
@@ -216,8 +256,10 @@ const googleAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as GoogleResponse;
+  const text = data.candidates[0]?.content?.parts[0]?.text;
+  if (!text) throw new ProviderError('Google Gemini returned no content (possibly content-filtered)', 200);
   return {
-    text: data.candidates[0]?.content?.parts[0]?.text ?? '',
+    text,
     inputTokens: data.usageMetadata?.promptTokenCount,
     outputTokens: data.usageMetadata?.candidatesTokenCount,
     model: model.id,
@@ -234,7 +276,7 @@ const mistralAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   if (opts.systemPrompt) messages.push({ role: 'system', content: opts.systemPrompt });
   messages.push({ role: 'user', content: prompt });
 
-  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+  const res = await fetchWithTimeout('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${creds.mistral}`,
@@ -243,7 +285,7 @@ const mistralAdapter: AdapterFn = async (model, prompt, creds, opts) => {
     body: JSON.stringify({
       model: model.id,
       messages,
-      max_tokens: opts.maxTokens ?? 4096,
+      ...(opts.maxTokens && opts.maxTokens > 0 ? { max_tokens: opts.maxTokens } : {}),
       temperature: opts.temperature ?? 0.7,
     }),
   });
@@ -254,8 +296,10 @@ const mistralAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as OpenAIResponse;
+  const text = data.choices[0]?.message?.content;
+  if (!text) throw new ProviderError('Mistral returned no content (possibly content-filtered)', 200);
   return {
-    text: data.choices[0]?.message?.content ?? '',
+    text,
     inputTokens: data.usage?.prompt_tokens,
     outputTokens: data.usage?.completion_tokens,
     model: model.id,
@@ -272,7 +316,7 @@ const groqAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   if (opts.systemPrompt) messages.push({ role: 'system', content: opts.systemPrompt });
   messages.push({ role: 'user', content: prompt });
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${creds.groq}`,
@@ -281,7 +325,7 @@ const groqAdapter: AdapterFn = async (model, prompt, creds, opts) => {
     body: JSON.stringify({
       model: model.id,
       messages,
-      max_tokens: opts.maxTokens ?? 4096,
+      ...(opts.maxTokens && opts.maxTokens > 0 ? { max_tokens: opts.maxTokens } : {}),
       temperature: opts.temperature ?? 0.7,
     }),
   });
@@ -292,8 +336,10 @@ const groqAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as OpenAIResponse;
+  const text = data.choices[0]?.message?.content;
+  if (!text) throw new ProviderError('Groq returned no content (possibly content-filtered)', 200);
   return {
-    text: data.choices[0]?.message?.content ?? '',
+    text,
     inputTokens: data.usage?.prompt_tokens,
     outputTokens: data.usage?.completion_tokens,
     model: model.id,
@@ -316,7 +362,7 @@ const ollamaAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   if (opts.systemPrompt) messages.push({ role: 'system', content: opts.systemPrompt });
   messages.push({ role: 'user', content: prompt });
 
-  const res = await fetch(`${baseUrl}/api/chat`, {
+  const res = await fetchWithTimeout(`${baseUrl}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -324,7 +370,7 @@ const ollamaAdapter: AdapterFn = async (model, prompt, creds, opts) => {
       messages,
       stream: false,
       options: {
-        num_predict: opts.maxTokens ?? 4096,
+        ...(opts.maxTokens && opts.maxTokens > 0 ? { num_predict: opts.maxTokens } : {}),
         temperature: opts.temperature ?? 0.7,
       },
     }),
@@ -336,8 +382,10 @@ const ollamaAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   }
 
   const data = (await res.json()) as OllamaResponse;
+  const text = data.message?.content;
+  if (!text) throw new ProviderError('Ollama returned no content', 200);
   return {
-    text: data.message?.content ?? '',
+    text,
     inputTokens: data.prompt_eval_count,
     outputTokens: data.eval_count,
     model: model.id,

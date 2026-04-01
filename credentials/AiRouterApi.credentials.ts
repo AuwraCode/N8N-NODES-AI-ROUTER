@@ -4,7 +4,6 @@ export class AiRouterApi implements ICredentialType {
   name = 'aiRouterApi';
   displayName = 'AI Router Credentials API';
   icon = 'file:aiRouter.svg' as const;
-  testedBy = 'aiRouter';
   documentationUrl = 'https://github.com/your-org/n8n-nodes-ai-router#credentials-setup';
   properties: INodeProperties[] = [
     {

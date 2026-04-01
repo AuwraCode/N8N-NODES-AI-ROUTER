@@ -15,7 +15,7 @@ import type { CallOptions, CredMap, ModelResponse } from './providerAdapters';
 export const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
 /** HTTP status codes that indicate a permanent/config error — stop immediately. */
-export const NON_RETRIABLE_STATUS_CODES = new Set([400, 401, 403, 404]);
+export const NON_RETRIABLE_STATUS_CODES = new Set([400, 401, 403, 404, 422, 501, 505, 511]);
 
 /**
  * Determine whether an error from a provider call is worth retrying with a
@@ -36,6 +36,8 @@ export function isRetriable(error: unknown): boolean {
   }
   // fetch() network failures (ECONNREFUSED, DNS failure, etc.)
   if (error instanceof TypeError) return true;
+  // AbortController timeout fired (fetchWithTimeout) — Node.js throws plain Error, not DOMException
+  if ((error as Error)?.name === 'AbortError') return true;
   return false;
 }
 
