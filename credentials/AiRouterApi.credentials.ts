@@ -1,10 +1,24 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class AiRouterApi implements ICredentialType {
   name = 'aiRouterApi';
   displayName = 'AI Router Credentials API';
   icon = 'file:aiRouter.svg' as const;
   documentationUrl = 'https://github.com/your-org/n8n-nodes-ai-router#credentials-setup';
+
+  // Tests the Anthropic key if provided. Other provider keys are validated
+  // at call time inside the node — there is no single endpoint that covers all providers.
+  test: ICredentialTestRequest = {
+    request: {
+      baseURL: 'https://api.anthropic.com',
+      url: '/v1/models',
+      headers: {
+        'x-api-key': '={{$credentials.anthropicApiKey}}',
+        'anthropic-version': '2023-06-01',
+      },
+    },
+  };
+
   properties: INodeProperties[] = [
     {
       displayName: 'Anthropic API Key',
