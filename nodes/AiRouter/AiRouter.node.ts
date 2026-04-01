@@ -28,7 +28,7 @@ export class AiRouter implements INodeType {
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
-      { name: 'aiRouterApi', required: true, displayName: 'AI Router Credentials', testedBy: 'aiRouterTest' },
+      { name: 'aiRouterApi', required: true, displayName: 'AI Router Credentials' },
     ],
     properties: AI_ROUTER_PROPERTIES,
   };
@@ -37,7 +37,13 @@ export class AiRouter implements INodeType {
     const items = this.getInputData();
     const results: INodeExecutionData[] = [];
 
-    for (let i = 0; i < items.length; i++) {
+    const maxItemsPerExecution = this.getNodeParameter('maxItemsPerExecution', 0, 10) as number;
+    const itemLimit = maxItemsPerExecution > 0 ? Math.min(items.length, maxItemsPerExecution) : items.length;
+    if (maxItemsPerExecution > 0 && items.length > maxItemsPerExecution) {
+      this.logger.warn(`AI Router: ${items.length} items received but limited to ${maxItemsPerExecution} by maxItemsPerExecution. Increase or set to 0 to process all.`);
+    }
+
+    for (let i = 0; i < itemLimit; i++) {
       try {
         const prompt = this.getNodeParameter('prompt', i, '') as string;
         const mode = this.getNodeParameter('mode', i, 'auto') as RoutingMode;
@@ -45,6 +51,7 @@ export class AiRouter implements INodeType {
         const maxCostRaw = this.getNodeParameter('maxCostPer1k', i, 0) as number;
         const allowedProviders = this.getNodeParameter('allowedProviders', i, []) as ProviderType[];
         const fallbackEnabled = this.getNodeParameter('fallbackEnabled', i, true) as boolean;
+        const maxTokens = this.getNodeParameter('maxTokens', i, 2048) as number;
         const outputModelUsed = this.getNodeParameter('outputModelUsed', i, false) as boolean;
 
         if (!prompt.trim()) {
@@ -52,7 +59,12 @@ export class AiRouter implements INodeType {
         }
 
         // ── Resolve credentials from single credential object ────────────
-        const rawCreds = await this.getCredentials('aiRouterApi');
+        let rawCreds: Record<string, unknown>;
+        try {
+          rawCreds = await this.getCredentials('aiRouterApi') as Record<string, unknown>;
+        } catch {
+          throw new NodeOperationError(this.getNode(), 'AI Router credentials are not configured.', { itemIndex: i });
+        }
         const creds: CredMap = {};
         if (rawCreds.anthropicApiKey) creds.anthropic = rawCreds.anthropicApiKey as string;
         if (rawCreds.openAiApiKey)    creds.openai    = rawCreds.openAiApiKey as string;
@@ -72,11 +84,14 @@ export class AiRouter implements INodeType {
         const task = (taskHint || detectTask(prompt).primaryTask) as TaskType;
 
         // ── Score and rank models ────────────────────────────────────────
+        // Rough token estimate (~4 chars per token) for context-window filtering
+        const promptLengthTokens = Math.ceil(prompt.length / 4);
         const scored = scoreModels(candidates, {
           task,
           mode,
           maxCostPer1K: maxCostRaw > 0 ? maxCostRaw : undefined,
           allowedProviders: allowedProviders.length > 0 ? allowedProviders : undefined,
+          promptLengthTokens,
         });
 
         if (scored.length === 0) {
@@ -90,10 +105,11 @@ export class AiRouter implements INodeType {
         // ── Execute with fallback ────────────────────────────────────────
         const ranked = scored.map((s) => s.model);
         const maxAttempts = fallbackEnabled ? Math.min(3, ranked.length) : 1;
-        const result = await executeWithFallback(ranked, prompt, creds, {}, { maxAttempts });
+        const result = await executeWithFallback(ranked, prompt, creds, { maxTokens: maxTokens > 0 ? maxTokens : undefined }, { maxAttempts });
 
         // ── Build output ─────────────────────────────────────────────────
         const outputJson: IDataObject = { ...items[i].json, response: result.response.text };
+        if (result.response.thinking !== undefined) outputJson.thinking = result.response.thinking;
         if (outputModelUsed) {
           outputJson.modelUsed = result.modelUsed.id;
           outputJson.providerUsed = result.modelUsed.provider;

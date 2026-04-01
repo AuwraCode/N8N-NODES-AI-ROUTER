@@ -92,6 +92,14 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     },
   },
   {
+    displayName: 'Max Tokens',
+    name: 'maxTokens',
+    type: 'number',
+    default: 0,
+    description: 'Maximum tokens to generate. Set to 0 for no limit (model default). Each model has its own ceiling (e.g. Claude Sonnet 4.6 supports up to 64K).',
+    typeOptions: { minValue: 0 },
+  },
+  {
     displayName: 'Enable Fallback',
     name: 'fallbackEnabled',
     type: 'boolean',
@@ -104,5 +112,13 @@ export const AI_ROUTER_PROPERTIES: INodeProperties[] = [
     type: 'boolean',
     default: false,
     description: 'Whether to include the selected model ID and provider in the output JSON',
+  },
+  {
+    displayName: 'Max Items Per Execution',
+    name: 'maxItemsPerExecution',
+    type: 'number',
+    default: 10,
+    description: 'Maximum number of input items to process in a single execution. Prevents accidental API cost drain from large batches or loops. Set to 0 for no limit.',
+    typeOptions: { minValue: 0 },
   },
 ];

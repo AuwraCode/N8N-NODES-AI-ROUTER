@@ -5,9 +5,13 @@
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
 [![Status: In Development](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues)
 
-> **⚠️ Early Development** — This node is functional but actively being developed. Model IDs, pricing data, and APIs may change. Run `npm run sync:models` periodically to catch stale model IDs. Feedback and bug reports are welcome via [GitHub Issues](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues).
+> **⚠️ Work in Progress — Many things may not work yet.**
+> This node is under active development. Most features are still being built and tested. Model IDs, pricing data, scoring weights, and provider adapters may change or break between versions. **Use with caution in production.** Bug reports and feedback are welcome via [GitHub Issues](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues).
 
 ## Changelog
+
+### v0.1.5
+- **Add:** `Max Items Per Execution` parameter (default `10`) — hard cap on items processed per run to prevent accidental API cost drain from loops or large batches
 
 ### v0.1.4
 - **Fix:** Anthropic requests no longer hang indefinitely — the request timeout now correctly catches `AbortError` in Node.js environments (n8n runs on Node.js where the error type differs from browsers)
@@ -100,6 +104,7 @@ You only need **one provider** to get started. Groq has a free tier — recommen
 | **Ollama Base URL** | string | `http://localhost:11434` | URL of your local Ollama instance |
 | **Enable Fallback** | boolean | `true` | Whether to retry with the next-best model on failure |
 | **Include Model Info in Output** | boolean | `false` | Whether to add `modelUsed`, `providerUsed`, and token counts to output |
+| **Max Items Per Execution** | number | `10` | Hard cap on how many input items are processed per run. Prevents cost drain from large batches or accidental loops. Set to `0` to disable. |
 
 ### Routing modes
 

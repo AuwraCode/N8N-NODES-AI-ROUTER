@@ -1,6 +1,6 @@
 {
   "name": "@auwra/n8n-nodes-ai-router",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Automatically route AI tasks to the most appropriate and cost-effective model across multiple providers",
   "license": "MIT",
   "keywords": [
