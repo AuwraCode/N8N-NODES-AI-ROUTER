@@ -113,6 +113,9 @@ const RULES: Record<TaskType, RuleSet> = {
  * @returns Detection result with primary task, confidence, and per-task scores.
  */
 export function detectTask(prompt: string): TaskDetectionResult {
+  // Normalize line breaks so cross-line patterns match correctly
+  const normalized = prompt.replace(/\r?\n/g, ' ');
+
   const rawScores: Record<TaskType, number> = {
     coding: 0,
     vision: 0,
@@ -126,7 +129,7 @@ export function detectTask(prompt: string): TaskDetectionResult {
 
   for (const [task, ruleset] of Object.entries(RULES) as Array<[TaskType, RuleSet]>) {
     for (const pattern of ruleset.patterns) {
-      const matches = prompt.match(pattern);
+      const matches = normalized.match(pattern);
       if (matches) {
         rawScores[task] += ruleset.weight * matches.length;
       }

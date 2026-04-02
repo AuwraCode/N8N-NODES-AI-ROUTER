@@ -1,0 +1,231 @@
+{
+  "name": "AI Router — Test Suite",
+  "nodes": [
+
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "▶ Run Routing Inspector",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 220]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Six prompts — one per task type the router recognises.\n// Dry-run mode means NO API calls are made; we just see which model wins.\nreturn [\n  {\n    json: {\n      label: '1 · Coding',\n      prompt: 'Write a TypeScript function that debounces async calls and returns a promise that resolves with the latest result.'\n    }\n  },\n  {\n    json: {\n      label: '2 · Analysis',\n      prompt: 'Analyze the trade-offs between microservices and a monolithic architecture for a startup with 3 engineers.'\n    }\n  },\n  {\n    json: {\n      label: '3 · Writing',\n      prompt: 'Write a professional email to a client explaining a two-week delay in the project delivery.'\n    }\n  },\n  {\n    json: {\n      label: '4 · Summarization',\n      prompt: 'Summarize the key points of the following article in 5 bullet points: [paste article here]'\n    }\n  },\n  {\n    json: {\n      label: '5 · Classification',\n      prompt: 'Classify this customer review as positive, negative, or neutral: \"The product arrived on time but the packaging was damaged.\"'\n    }\n  },\n  {\n    json: {\n      label: '6 · Chat',\n      prompt: 'Hey, how are you today?'\n    }\n  }\n];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Test Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 220]
+    },
+
+    {
+      "parameters": {
+        "prompt": "={{ $json.prompt }}",
+        "mode": "auto",
+        "taskHint": "",
+        "maxCostPer1k": 0,
+        "allowedProviders": ["anthropic", "openai", "google", "mistral", "groq"],
+        "maxTokens": 0,
+        "fallbackEnabled": true,
+        "dryRun": true,
+        "outputModelUsed": false,
+        "outputDetectedTask": true,
+        "outputScoreBreakdown": true,
+        "outputEstimatedCost": false,
+        "maxItemsPerExecution": 0
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "AI Router (Dry Run)",
+      "type": "n8n-nodes-ai-router.aiRouter",
+      "typeVersion": 1,
+      "position": [700, 220],
+      "credentials": {
+        "aiRouterApi": {
+          "id": "1",
+          "name": "AI Router Credentials"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Pretty-print the routing decision for each prompt.\nconst item = $input.item.json;\nreturn [{\n  json: {\n    label:       item.label,\n    prompt:      item.prompt.slice(0, 60) + '…',\n    task:        item.detectedTask,\n    confidence:  item.detectedTaskConfidence,\n    winner:      item.selectedModel,\n    provider:    item.selectedProvider,\n    score:       item.selectedScore,\n    top3: (item.scoreBreakdown || []).map(m =>\n      `${m.model} (${m.score}) tf=${m.breakdown.taskFit} cost=${m.breakdown.cost}`\n    )\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Format Routing Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 220]
+    },
+
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000010",
+      "name": "▶ Run Live API Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 520]
+    },
+
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "prompt",
+              "value": "Explain the difference between TCP and UDP in simple terms, then give one real-world example of each.",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000011",
+      "name": "Test Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 520]
+    },
+
+    {
+      "parameters": {
+        "prompt": "={{ $json.prompt }}",
+        "mode": "quality",
+        "taskHint": "",
+        "maxCostPer1k": 0,
+        "allowedProviders": ["anthropic", "openai", "google", "mistral", "groq"],
+        "maxTokens": 0,
+        "fallbackEnabled": true,
+        "dryRun": false,
+        "outputModelUsed": true,
+        "outputDetectedTask": true,
+        "outputScoreBreakdown": true,
+        "outputEstimatedCost": true,
+        "maxItemsPerExecution": 10
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000012",
+      "name": "AI Router · Quality",
+      "type": "n8n-nodes-ai-router.aiRouter",
+      "typeVersion": 1,
+      "position": [700, 440],
+      "credentials": {
+        "aiRouterApi": {
+          "id": "1",
+          "name": "AI Router Credentials"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "prompt": "={{ $json.prompt }}",
+        "mode": "cost",
+        "taskHint": "",
+        "maxCostPer1k": 0,
+        "allowedProviders": ["anthropic", "openai", "google", "mistral", "groq"],
+        "maxTokens": 0,
+        "fallbackEnabled": true,
+        "dryRun": false,
+        "outputModelUsed": true,
+        "outputDetectedTask": false,
+        "outputScoreBreakdown": false,
+        "outputEstimatedCost": true,
+        "maxItemsPerExecution": 10
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000013",
+      "name": "AI Router · Cost",
+      "type": "n8n-nodes-ai-router.aiRouter",
+      "typeVersion": 1,
+      "position": [700, 560],
+      "credentials": {
+        "aiRouterApi": {
+          "id": "1",
+          "name": "AI Router Credentials"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "prompt": "={{ $json.prompt }}",
+        "mode": "speed",
+        "taskHint": "",
+        "maxCostPer1k": 0,
+        "allowedProviders": ["anthropic", "openai", "google", "mistral", "groq"],
+        "maxTokens": 0,
+        "fallbackEnabled": true,
+        "dryRun": false,
+        "outputModelUsed": true,
+        "outputDetectedTask": false,
+        "outputScoreBreakdown": false,
+        "outputEstimatedCost": true,
+        "maxItemsPerExecution": 10
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000014",
+      "name": "AI Router · Speed",
+      "type": "n8n-nodes-ai-router.aiRouter",
+      "typeVersion": 1,
+      "position": [700, 680],
+      "credentials": {
+        "aiRouterApi": {
+          "id": "1",
+          "name": "AI Router Credentials"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Merge the three mode results side-by-side for comparison.\nconst quality = $('AI Router · Quality').first().json;\nconst cost    = $('AI Router · Cost').first().json;\nconst speed   = $('AI Router · Speed').first().json;\n\nreturn [{\n  json: {\n    prompt: quality.prompt,\n    quality: {\n      model:          quality.modelUsed,\n      provider:       quality.providerUsed,\n      estimatedCost:  quality.estimatedCostUSD,\n      responseLength: quality.response?.length\n    },\n    cost: {\n      model:          cost.modelUsed,\n      provider:       cost.providerUsed,\n      estimatedCost:  cost.estimatedCostUSD,\n      responseLength: cost.response?.length\n    },\n    speed: {\n      model:          speed.modelUsed,\n      provider:       speed.providerUsed,\n      estimatedCost:  speed.estimatedCostUSD,\n      responseLength: speed.response?.length\n    }\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000015",
+      "name": "Compare Modes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 560]
+    }
+
+  ],
+
+  "connections": {
+    "▶ Run Routing Inspector": {
+      "main": [[{ "node": "Test Prompts", "type": "main", "index": 0 }]]
+    },
+    "Test Prompts": {
+      "main": [[{ "node": "AI Router (Dry Run)", "type": "main", "index": 0 }]]
+    },
+    "AI Router (Dry Run)": {
+      "main": [[{ "node": "Format Routing Result", "type": "main", "index": 0 }]]
+    },
+
+    "▶ Run Live API Test": {
+      "main": [[{ "node": "Test Prompt", "type": "main", "index": 0 }]]
+    },
+    "Test Prompt": {
+      "main": [[
+        { "node": "AI Router · Quality", "type": "main", "index": 0 },
+        { "node": "AI Router · Cost",    "type": "main", "index": 0 },
+        { "node": "AI Router · Speed",   "type": "main", "index": 0 }
+      ]]
+    },
+    "AI Router · Quality": {
+      "main": [[{ "node": "Compare Modes", "type": "main", "index": 0 }]]
+    },
+    "AI Router · Cost": {
+      "main": [[{ "node": "Compare Modes", "type": "main", "index": 0 }]]
+    },
+    "AI Router · Speed": {
+      "main": [[{ "node": "Compare Modes", "type": "main", "index": 0 }]]
+    }
+  },
+
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

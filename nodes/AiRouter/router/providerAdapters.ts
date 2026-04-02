@@ -94,6 +94,22 @@ type AdapterFn = (
   options: CallOptions,
 ) => Promise<ModelResponse>;
 
+/**
+ * Resolve the effective max-tokens value for an API call.
+ *
+ * - If the user set an explicit limit, honour it but cap it at the model's
+ *   ceiling to prevent 400 errors from over-specified values.
+ * - If no limit was requested (0 / undefined), use the model's documented
+ *   maximum so the response is never silently truncated by a stale hard-code.
+ */
+function resolveMaxTokens(model: ModelSpec, opts: CallOptions): number {
+  const modelMax = model.capabilities.maxOutputTokens;
+  if (opts.maxTokens && opts.maxTokens > 0) {
+    return Math.min(opts.maxTokens, modelMax);
+  }
+  return modelMax;
+}
+
 // ── Anthropic ────────────────────────────────────────────────────────────────
 
 interface AnthropicTextBlock {
@@ -119,8 +135,9 @@ const anthropicAdapter: AdapterFn = async (model, prompt, creds, opts) => {
   const body: Record<string, unknown> = {
     model: model.id,
     messages: [{ role: 'user', content: prompt }],
-    // max_tokens is required by Anthropic API — default to 4096 if not specified
-    max_tokens: opts.maxTokens && opts.maxTokens > 0 ? opts.maxTokens : 4096,
+    // max_tokens is required by Anthropic API — use the model's documented maximum
+    // when the user hasn't set a limit, capped at the model ceiling otherwise.
+    max_tokens: resolveMaxTokens(model, opts),
   };
   if (opts.systemPrompt) body.system = opts.systemPrompt;
 
@@ -178,7 +195,7 @@ const openaiAdapter: AdapterFn = async (model, prompt, creds, opts) => {
     model: model.id,
     messages,
   };
-  if (opts.maxTokens && opts.maxTokens > 0) body.max_completion_tokens = opts.maxTokens;
+  body.max_completion_tokens = resolveMaxTokens(model, opts);
 
   // Reasoning models (o3) do not accept temperature or stream parameters
   if (!model.capabilities.supportsReasoningMode) {
@@ -230,8 +247,10 @@ const googleAdapter: AdapterFn = async (model, prompt, creds, opts) => {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent`;
 
-  const generationConfig: Record<string, unknown> = { temperature: opts.temperature ?? 0.7 };
-  if (opts.maxTokens && opts.maxTokens > 0) generationConfig.maxOutputTokens = opts.maxTokens;
+  const generationConfig: Record<string, unknown> = {
+    temperature: opts.temperature ?? 0.7,
+    maxOutputTokens: resolveMaxTokens(model, opts),
+  };
   const body: Record<string, unknown> = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig,
@@ -285,7 +304,7 @@ const mistralAdapter: AdapterFn = async (model, prompt, creds, opts) => {
     body: JSON.stringify({
       model: model.id,
       messages,
-      ...(opts.maxTokens && opts.maxTokens > 0 ? { max_tokens: opts.maxTokens } : {}),
+      max_tokens: resolveMaxTokens(model, opts),
       temperature: opts.temperature ?? 0.7,
     }),
   });
@@ -325,7 +344,7 @@ const groqAdapter: AdapterFn = async (model, prompt, creds, opts) => {
     body: JSON.stringify({
       model: model.id,
       messages,
-      ...(opts.maxTokens && opts.maxTokens > 0 ? { max_tokens: opts.maxTokens } : {}),
+      max_tokens: resolveMaxTokens(model, opts),
       temperature: opts.temperature ?? 0.7,
     }),
   });
@@ -370,7 +389,7 @@ const ollamaAdapter: AdapterFn = async (model, prompt, creds, opts) => {
       messages,
       stream: false,
       options: {
-        ...(opts.maxTokens && opts.maxTokens > 0 ? { num_predict: opts.maxTokens } : {}),
+        num_predict: resolveMaxTokens(model, opts),
         temperature: opts.temperature ?? 0.7,
       },
     }),

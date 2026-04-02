@@ -57,8 +57,15 @@ export interface ModelCapabilities {
   supportsReasoningMode: boolean;
   /** Whether the model runs locally (e.g. Ollama). Zero cost, privacy-preserving. */
   isLocal: boolean;
-  /** Maximum context window in tokens. */
+  /** Maximum context window in tokens (input + output combined). */
   contextWindow: number;
+  /**
+   * Maximum output tokens the model can generate in a single response.
+   * Used as the default when the user has not set a maxTokens limit, and
+   * as a hard cap to prevent 400 errors from over-specified limits.
+   * Pricing last verified: April 2026.
+   */
+  maxOutputTokens: number;
 }
 
 /**
@@ -92,7 +99,7 @@ export interface ModelSpec {
  * The complete model registry. Add new models here — no other file needs to change
  * for the routing engine to discover and use them.
  *
- * Pricing last verified: March 2026. Run `npm run sync:models` to check for stale IDs.
+ * Pricing last verified: April 2026. Run `npm run sync:models` to check for stale IDs.
  * Update blendedPer1K when pricing changes: (inputPer1M * 0.7 + outputPer1M * 0.3) / 1000
  */
 export const MODEL_REGISTRY: readonly ModelSpec[] = [
@@ -111,6 +118,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: true,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 32_000,
     },
     latencyTier: 3,
     taskAffinity: {
@@ -135,6 +143,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 64_000,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -159,6 +168,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 200_000,
+      maxOutputTokens: 8_192,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -186,6 +196,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -210,6 +221,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 16_384,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -235,6 +247,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: true,
       isLocal: false,
       contextWindow: 200_000,
+      maxOutputTokens: 100_000,
     },
     latencyTier: 3,
     taskAffinity: {
@@ -257,6 +270,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: true,
       isLocal: false,
       contextWindow: 200_000,
+      maxOutputTokens: 65_536,
     },
     latencyTier: 3,
     taskAffinity: {
@@ -278,6 +292,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 16_384,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -304,6 +319,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 65_536,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -329,6 +345,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 65_536,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -353,6 +370,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 8_192,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -378,6 +396,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 8_192,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -402,6 +421,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 8_192,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -418,7 +438,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
   {
     id: 'mistral-large-2512',
     provider: 'mistral',
-    displayName: 'Mistral Large 3',
+    displayName: 'Mistral Large (2512)',
     pricing: { inputPer1M: 0.5, outputPer1M: 1.5, blendedPer1K: 0.0008 },
     capabilities: {
       supportsVision: false,
@@ -427,6 +447,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 262_000,
+      maxOutputTokens: 131_072,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -450,6 +471,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 131_000,
+      maxOutputTokens: 131_072,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -473,6 +495,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 262_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -496,6 +519,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 256_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 2,
     taskAffinity: {
@@ -519,6 +543,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 8_192,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -539,6 +564,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -562,6 +588,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 10_000_000,
+      maxOutputTokens: 16_384,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -587,6 +614,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -609,6 +637,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -633,6 +662,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 128_000,
+      maxOutputTokens: 32_768,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -657,6 +687,7 @@ export const MODEL_REGISTRY: readonly ModelSpec[] = [
       supportsReasoningMode: false,
       isLocal: false,
       contextWindow: 1_000_000,
+      maxOutputTokens: 16_384,
     },
     latencyTier: 1,
     taskAffinity: {
@@ -684,6 +715,7 @@ export const OLLAMA_BASE_SPEC: Omit<ModelSpec, 'id' | 'displayName'> = {
     supportsReasoningMode: false,
     isLocal: true,
     contextWindow: 128_000,
+    maxOutputTokens: 4_096,
   },
   latencyTier: 2,
   taskAffinity: { chat: 0.75, writing: 0.70, coding: 0.70 },

@@ -25,12 +25,7 @@ describe('scoreModels', () => {
 
   describe('mode=quality', () => {
     it('selects a high-quality model for coding', () => {
-      // Restrict to providers without a 10M-context model so coding affinity drives selection
-      const scored = scoreModels(MODEL_REGISTRY, {
-        task: 'coding',
-        mode: 'quality',
-        allowedProviders: ['anthropic', 'openai', 'mistral'],
-      });
+      const scored = scoreModels(MODEL_REGISTRY, { task: 'coding', mode: 'quality' });
       expect(scored.length).toBeGreaterThan(0);
       // Top model should have a high coding affinity
       const winner = scored[0].model;
@@ -39,16 +34,24 @@ describe('scoreModels', () => {
     });
 
     it('selects a high-quality model for analysis', () => {
-      // Restrict to providers without a 10M-context model so analysis affinity drives selection
-      const scored = scoreModels(MODEL_REGISTRY, {
-        task: 'analysis',
-        mode: 'quality',
-        allowedProviders: ['anthropic', 'openai', 'google'],
-      });
+      const scored = scoreModels(MODEL_REGISTRY, { task: 'analysis', mode: 'quality' });
       expect(scored.length).toBeGreaterThan(0);
       const winner = scored[0].model;
       const analysisAffinity = winner.taskAffinity.analysis ?? 0.5;
       expect(analysisAffinity).toBeGreaterThanOrEqual(0.85);
+    });
+
+    it('does not select a cheap fast model at the top in quality mode', () => {
+      const cheapFastIds = [
+        'gemini-2.5-flash-lite',
+        'llama-3.1-8b-instant',
+        'openai/gpt-oss-20b',
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+      ];
+      for (const task of ['coding', 'analysis', 'writing'] as const) {
+        const scored = scoreModels(MODEL_REGISTRY, { task, mode: 'quality' });
+        expect(cheapFastIds).not.toContain(scored[0].model.id);
+      }
     });
   });
 
@@ -187,6 +190,78 @@ describe('scoreModels', () => {
         expect(s.score).toBeGreaterThanOrEqual(0);
         expect(s.score).toBeLessThanOrEqual(1);
       }
+    });
+  });
+
+  describe('promptLengthTokens filter', () => {
+    it('excludes models whose context window is smaller than the prompt', () => {
+      // claude-haiku has 200K context — a 250K-token prompt should exclude it
+      const scored = scoreModels(MODEL_REGISTRY, {
+        task: 'analysis',
+        mode: 'auto',
+        promptLengthTokens: 250_000,
+        allowedProviders: ['anthropic'],
+      });
+      const ids = scored.map((s) => s.model.id);
+      expect(ids).not.toContain('claude-haiku-4-5-20251001');
+      expect(ids).toContain('claude-opus-4-6');
+    });
+
+    it('keeps all models when promptLengthTokens is 0', () => {
+      const allScored  = scoreModels(MODEL_REGISTRY, { task: 'chat', mode: 'auto' });
+      const zeroScored = scoreModels(MODEL_REGISTRY, { task: 'chat', mode: 'auto', promptLengthTokens: 0 });
+      expect(zeroScored.length).toBe(allScored.length);
+    });
+
+    it('returns empty array when prompt is longer than all models contexts', () => {
+      const scored = scoreModels(MODEL_REGISTRY, {
+        task: 'chat',
+        mode: 'auto',
+        allowedProviders: ['anthropic'],
+        promptLengthTokens: 2_000_000, // larger than any Anthropic model
+      });
+      expect(scored.length).toBe(0);
+    });
+  });
+
+  describe('context score log normalization', () => {
+    it('does not collapse 1M-context models when a 10M-context model is in the pool', () => {
+      // Without log normalization: contextScore(claude-opus) = 1M/10M = 0.10
+      // With log normalization:    contextScore(claude-opus) = log(1M+1)/log(10M+1) ≈ 0.857
+      const scored = scoreModels(MODEL_REGISTRY, { task: 'analysis', mode: 'quality' });
+      const opus = scored.find((s) => s.model.id === 'claude-opus-4-6');
+      expect(opus).toBeDefined();
+      expect(opus!.breakdown.contextSize).toBeGreaterThan(0.8);
+    });
+
+    it('gives perfect contextSize score to the model with the largest context window', () => {
+      const scored = scoreModels(MODEL_REGISTRY, { task: 'chat', mode: 'auto' });
+      const maxContextModel = scored.reduce((max, s) =>
+        s.model.capabilities.contextWindow > max.model.capabilities.contextWindow ? s : max,
+      );
+      expect(maxContextModel.breakdown.contextSize).toBeCloseTo(1.0, 5);
+    });
+
+    it('gives a contextSize score of 1.0 when all models share the same context window', () => {
+      const twoModels: ModelSpec[] = [
+        { ...MODEL_REGISTRY[0], capabilities: { ...MODEL_REGISTRY[0].capabilities, contextWindow: 128_000 } },
+        { ...MODEL_REGISTRY[1], capabilities: { ...MODEL_REGISTRY[1].capabilities, contextWindow: 128_000 } },
+      ];
+      const scored = scoreModels(twoModels, { task: 'chat', mode: 'auto' });
+      for (const s of scored) {
+        expect(s.breakdown.contextSize).toBeCloseTo(1.0, 5);
+      }
+    });
+  });
+
+  describe('mode=auto deterministic tie-breaking', () => {
+    it('sorts by model id alphabetically when scores are equal', () => {
+      // Two identical models produce the same score — result order must be stable
+      const modelA: ModelSpec = { ...MODEL_REGISTRY[0], id: 'zzz-model' };
+      const modelB: ModelSpec = { ...MODEL_REGISTRY[0], id: 'aaa-model' };
+      const scored = scoreModels([modelA, modelB], { task: 'chat', mode: 'auto' });
+      expect(scored[0].model.id).toBe('aaa-model');
+      expect(scored[1].model.id).toBe('zzz-model');
     });
   });
 

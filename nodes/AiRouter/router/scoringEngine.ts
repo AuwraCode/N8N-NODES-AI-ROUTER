@@ -45,7 +45,6 @@ export interface ScoredModel {
     cost: number;
     latency: number;
     contextSize: number;
-    total: number;
   };
 }
 
@@ -55,7 +54,7 @@ export interface ScoredModel {
  */
 const MODE_WEIGHTS: Record<RoutingMode, ScoringWeights> = {
   auto:    { taskFit: 0.35, cost: 0.25, latency: 0.20, contextSize: 0.20 },
-  quality: { taskFit: 0.55, cost: 0.05, latency: 0.10, contextSize: 0.30 },
+  quality: { taskFit: 0.70, cost: 0.05, latency: 0.05, contextSize: 0.20 },
   cost:    { taskFit: 0.20, cost: 0.60, latency: 0.10, contextSize: 0.10 },
   speed:   { taskFit: 0.25, cost: 0.15, latency: 0.50, contextSize: 0.10 },
   local:   { taskFit: 0.40, cost: 0.40, latency: 0.10, contextSize: 0.10 },
@@ -122,7 +121,11 @@ export function scoreModels(candidates: readonly ModelSpec[], ctx: ScoringContex
     // Non-linear: tier-3 models (reasoning models) get a hard penalty
     const latencyScore = 1 - (m.latencyTier - 1) / 2;
 
-    const contextScore = maxContext > 0 ? m.capabilities.contextWindow / maxContext : 1;
+    // Log normalization prevents a single outlier (e.g. 10M-context model) from
+    // collapsing all other models to near-zero scores (linear would give 1M/10M = 0.1).
+    const contextScore = maxContext > 0
+      ? Math.log(m.capabilities.contextWindow + 1) / Math.log(maxContext + 1)
+      : 1;
 
     const total =
       weights.taskFit * taskFit +
@@ -133,11 +136,11 @@ export function scoreModels(candidates: readonly ModelSpec[], ctx: ScoringContex
     return {
       model: m,
       score: total,
-      breakdown: { taskFit, cost: costScore, latency: latencyScore, contextSize: contextScore, total },
+      breakdown: { taskFit, cost: costScore, latency: latencyScore, contextSize: contextScore },
     };
   });
 
-  return scored.sort((a, b) => b.score - a.score);
+  return scored.sort((a, b) => b.score - a.score || a.model.id.localeCompare(b.model.id));
 }
 
 /**
