@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
 
+> **⚠️ Work in Progress** — This node is under active development. Some features, model IDs, or provider adapters may not work as expected. Bug reports and feedback are welcome via [GitHub Issues](https://github.com/AuwraCode/N8N-NODES-AI-ROUTER/issues).
+
 An n8n community node that **automatically routes each prompt to the best AI model** across Anthropic, OpenAI, Google Gemini, Mistral AI, Groq, and local Ollama — based on what the task actually needs.
 
 Instead of hardcoding one model, the AI Router detects whether a prompt is a coding task, analysis, creative writing, summarization, vision, or chat, then picks the optimal model for your priority: cheapest, fastest, highest quality, or balanced. It falls back to the next-best model automatically if the first one fails.
