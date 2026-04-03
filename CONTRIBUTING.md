@@ -5,7 +5,7 @@ Thank you for contributing! This guide covers the essentials.
 ## Getting started
 
 ```bash
-git clone https://github.com/your-org/n8n-nodes-ai-router
+git clone https://github.com/AuwraCode/N8N-NODES-AI-ROUTER.git
 cd n8n-nodes-ai-router
 npm install
 npm run build

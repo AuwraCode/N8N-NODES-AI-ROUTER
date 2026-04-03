@@ -21,6 +21,8 @@ Instead of hardcoding one model, the AI Router detects whether a prompt is a cod
 - [Keeping the registry up to date](#keeping-the-registry-up-to-date)
 - [Adding a custom model](#adding-a-custom-model)
 - [Example workflows](#example-workflows)
+- [Project structure](#project-structure)
+- [Development](#development)
 - [Changelog](#changelog)
 - [Contributing](#contributing)
 - [License](#license)
@@ -195,6 +197,43 @@ Weights by mode:
 | cost | 0.20 | **0.60** | 0.10 | 0.10 |
 | speed | 0.25 | 0.15 | **0.50** | 0.10 |
 | local | 0.40 | 0.40 | 0.10 | 0.10 |
+
+### Task detection confidence
+
+When a task hint is not set, the node reports `detectedTaskConfidence` alongside the detected task:
+
+```
+confidence = min(1, topScore − secondScore + topScore × 0.5)
+```
+
+This rewards both a clear gap over the runner-up and a strong absolute score, so unambiguous prompts (e.g. a code block with a language tag) score near 1.0 while ambiguous prompts score lower. A confidence below ~0.4 suggests the prompt could belong to multiple categories; setting a `taskHint` manually will produce more predictable routing in those cases.
+
+### Fallback chain
+
+When `Enable Fallback` is on, the node tries up to 3 models from the ranked list before giving up.
+
+**Which errors trigger fallback:**
+
+| Error | Retriable? | Reason |
+|-------|-----------|--------|
+| HTTP 429 | Yes | Rate limit — try next provider |
+| HTTP 500, 502, 503, 504 | Yes | Server-side transient error |
+| HTTP 400, 401, 403, 404, 422 | No | Config error — surfaced immediately |
+| Unknown 4xx | No | Treated as config/auth problem |
+| Unknown 5xx | Yes | Treated as transient |
+| Network error (`TypeError`) | Yes | DNS failure, connection refused |
+| Request timeout (90 s) | Yes | Surfaced as 504 |
+
+A non-retriable error (e.g. 401 Unauthorized) stops the chain immediately — there's no point trying other models with the same bad key.
+
+When all attempts fail, the error message lists every model tried and its failure reason:
+
+```
+All 3 model attempt(s) failed:
+  • Claude Sonnet 4.6 (anthropic): Anthropic API error 429: rate_limit_error
+  • GPT-4.1 (openai): OpenAI API error 503: Service Unavailable
+  • Gemini 2.5 Pro (google): Google Gemini API error 503: overloaded
+```
 
 ---
 
@@ -413,6 +452,90 @@ When **Dry Run** is enabled, no API call is made and the output is:
   "scoreBreakdown": [ ... ]
 }
 ```
+
+---
+
+## Project structure
+
+```
+n8n-nodes-ai-router/
+├── credentials/
+│   └── AiRouterApi.credentials.ts    # n8n credential type — all provider API keys in one place
+├── nodes/
+│   └── AiRouter/
+│       ├── AiRouter.node.ts           # Main n8n node class — execute loop, parameter reading, output assembly
+│       ├── AiRouter.properties.ts     # n8n UI property definitions (extracted to keep the node file short)
+│       ├── AiRouter.node.json         # Node metadata for the n8n codex / search index
+│       ├── aiRouter.svg               # Node icon
+│       └── router/
+│           ├── modelRegistry.ts       # Single source of truth: all model specs, pricing, capabilities, task affinities
+│           ├── taskDetector.ts        # Local heuristic classifier — no API call, weighted regex matching
+│           ├── scoringEngine.ts       # Multi-criteria scoring and ranking of candidate models
+│           ├── fallbackChain.ts       # Retry logic with retriability classification per HTTP status code
+│           └── providerAdapters.ts    # One HTTP adapter per provider — normalizes responses to a common shape
+├── test/
+│   └── fallbackChain.test.ts          # Unit tests (Vitest) — mocks fetch, covers all retriability branches
+└── test-workflows/
+    └── ai-router-test-suite.json      # Importable n8n workflow for end-to-end testing
+```
+
+**Data flow:**
+
+```
+AiRouter.node.ts (execute)
+  └─► taskDetector.detectTask()          — classify prompt locally
+  └─► scoringEngine.scoreModels()        — filter + rank all candidates
+  └─► fallbackChain.executeWithFallback()
+        └─► providerAdapters.callModel() — HTTP call to winning model
+              └─► (retry with next model on retriable error)
+```
+
+---
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/AuwraCode/N8N-NODES-AI-ROUTER.git
+cd N8N-NODES-AI-ROUTER
+npm install
+npm run build
+npm test
+```
+
+### Commands
+
+| Command | Description |
+|---|---|
+| `npm run build` | Compile TypeScript to `dist/` |
+| `npm run dev` | Watch mode — recompile on change |
+| `npm run lint` | Run n8n ESLint rules |
+| `npm run lint:fix` | Auto-fix lint errors |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run test:watch` | Watch mode for tests |
+| `npm run test:coverage` | Generate coverage report |
+| `npm run sync:models` | Check for stale model IDs against provider APIs |
+
+### Testing in a local n8n instance
+
+```bash
+npm run build
+
+# Link into your n8n custom nodes directory
+cd ~/.n8n/nodes
+npm install /path/to/N8N-NODES-AI-ROUTER
+
+# Restart n8n — the "AI Router" node appears in the Transform category
+```
+
+### Running tests
+
+```bash
+npm test
+```
+
+Tests use `vi.stubGlobal('fetch', ...)` to mock HTTP — no real API calls needed. See `test/fallbackChain.test.ts` for test structure.
 
 ---
 
